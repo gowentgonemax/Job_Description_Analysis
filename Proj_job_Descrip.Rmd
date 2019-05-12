@@ -1,0 +1,93 @@
+---
+title: "Job description analysis"
+author: "Ravi Shah"
+date: "May 4, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Introduction
+A job analysis is a process used to collect information about the duties, responsibilities, necessary skills, outcomes, and work environment of a particular job offered.A professional in active job search mode might scan anywhere from a handful to a dozen job position descriptions every day, which can get time-consuming. The goal is to use time efficiently to pick out the opportunities that are worth pursuing, and avoid investing energy into ones that aren’t likely to turn into attractive offers and satisfying careers.But this project has mainly focused on skills mention in the job description.
+
+###Package used throughout the whole project
+```{r message=FALSE}
+require("RColorBrewer")   #colourful graphs with pre-made color palettes 
+require("ggplot2") #creating graphics
+require("wordcloud") #Word cloud for the most frequent number
+require("xlsx") #reading data from Ms-excel file
+require("openxlsx")
+library("tm") # text-mining
+require("dplyr") # data manipulation 
+```
+
+###Data Loading
+Initially, planning to get the data from Glassdoor, but due to resctriction of providing Token key ofr API by glassdoor, Had to go for alternative process. Hence this preloaded data comes from dice.com in excel format. 
+Loading data from Excel file to the dataframe to furthur cleaning process.
+```{r}
+myfile <- "ProjectData.xlsx" #using the variable to store data file.
+xlsx_data <- read.xlsx2(myfile,sheetIndex = 1) # Reading the Data file
+df <- data.frame(xlsx_data) #Loading all the excel data set to Data Frame
+```
+####Sample Data
+Due to high volume of data in data frame, System wasn't operating properly due to low RAM capacity,Hence taken  1000 sample data from whole data set to reduce the pressure on RAM.
+```{r}
+DF_Sample <- sample_n(df,1000)
+```
+
+```{r echo=TRUE}
+jobD_DF <- DF_Sample$JobDescription
+job_Corpus <- VCorpus(VectorSource(jobD_DF))
+```
+
+Selecting only skills mention in the job description by Removing all the white Spaces from the data
+```{r echo=TRUE}
+job_Corpus <- tm_map(job_Corpus,stripWhitespace)
+```
+
+```{r}
+job_Corpus <- tm_map(job_Corpus,removePunctuation) #Removing all punctuation from the data
+```
+
+```{r}
+job_Corpus <- tm_map(job_Corpus,content_transformer(tolower)) # Makind all to lower case
+```
+
+```{r echo=TRUE}
+job_Corpus <- tm_map(job_Corpus, removeWords, stopwords("en")) #Removing all the  English words from Data set
+```
+
+####Creating Matrix
+```{r echo=TRUE}
+dtm <- TermDocumentMatrix(job_Corpus) #Representing the Skills in Matrix form
+m <-as.matrix(dtm)
+v <- sort(rowSums(m),decreasing = TRUE)
+freqWordDF <- data.frame(word=names(v),freq = v)
+```
+###Bar Graph
+In the bar graph, The top 15 skills are selected.It is very difficuly to display all the skills in the bargrapgh so Word cloud is the best option for this project.
+```{r}
+barplot(freqWordDF[1:15,]$freq, las = 2, names.arg = freqWordDF[1:15,]$word,
+        col ="lightblue", main ="Most frequent Skills",
+        ylab = "Skills frequencies")
+```
+
+### Word Cloud 
+The word cloud is created for the most Frequent skills required in the job description on the basis of 1000 sample Job position offered.
+```{r}
+set.seed(1234) # Randomly data size taken
+wordcloud(words = freqWordDF$word, 
+          freq = freqWordDF$freq, 
+          min.freq = 1000,
+          use.r.layout = FALSE,
+          fixed.asp = TRUE,
+          max.words=30, 
+          random.order=TRUE, 
+          rot.per=.45,
+          colors=brewer.pal(8, "Dark2"))
+```
+
+
+
